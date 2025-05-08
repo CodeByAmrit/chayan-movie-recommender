@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold mb-4">Welcome to Chayan</h1>
+        <p class="text-gray-300 mb-6">Your personal movie recommendation system</p>
+        
+        <form action="/search" method="get" class="flex">
+            <input type="text" name="q" placeholder="Search for movies..." 
+                   class="flex-grow p-3 rounded-l bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <button type="submit" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-r">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+
+    <h2 class="text-2xl font-bold mb-4">Popular Movies</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for movie in movies %}
+            <a href="/movie/{{ movie.id }}" class="block bg-gray-800 rounded-lg overflow-hidden hover:transform hover:scale-105 transition duration-300">
+                {% if movie.poster_path %}
+                    <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" alt="{{ movie.title }}" class="w-full h-64 object-cover">
+                {% else %}
+                    <div class="w-full h-64 bg-gray-700 flex items-center justify-center">
+                        <i class="fas fa-film text-4xl text-gray-500"></i>
+                    </div>
+                {% endif %}
+                <div class="p-4">
+                    <h3 class="font-bold text-lg mb-1">{{ movie.title }}</h3>
+                    <div class="flex items-center text-yellow-400 mb-2">
+                        <i class="fas fa-star"></i>
+                        <span class="ml-1">{{ "%.1f"|format(movie.rating) }}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm line-clamp-2">{{ movie.overview }}</p>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+
+    {% if 'user_id' in session %}
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold mb-4">Recommended For You</h2>
+            <div id="recommendations" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Recommendations will be loaded here via AJAX -->
+                <div class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl text-purple-500"></i>
+                    <p class="mt-2">Loading recommendations...</p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Load recommendations via AJAX
+            fetch('/recommendations')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('recommendations');
+                    if (data.status === 'success' && data.recommendations.length > 0) {
+                        let html = '';
+                        data.recommendations.forEach(movie => {
+                            html += `
+                                <a href="/movie/${movie.id}" class="block bg-gray-800 rounded-lg overflow-hidden hover:transform hover:scale-105 transition duration-300">
+                                    ${movie.poster_path ? 
+                                        `<img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" class="w-full h-64 object-cover">` :
+                                        `<div class="w-full h-64 bg-gray-700 flex items-center justify-center">
+                                            <i class="fas fa-film text-4xl text-gray-500"></i>
+                                        </div>`
+                                    }
+                                    <div class="p-4">
+                                        <h3 class="font-bold text-lg mb-1">${movie.title}</h3>
+                                        <div class="flex items-center text-yellow-400 mb-2">
+                                            <i class="fas fa-star"></i>
+                                            <span class="ml-1">${movie.rating ? movie.rating.toFixed(1) : 'N/A'}</span>
+                                        </div>
+                                        <p class="text-gray-400 text-sm line-clamp-2">${movie.overview || 'No overview available'}</p>
+                                    </div>
+                                </a>
+                            `;
+                        });
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = `
+                            <div class="col-span-full text-center py-8">
+                                <i class="fas fa-info-circle text-2xl text-purple-500"></i>
+                                <p class="mt-2">Rate some movies to get personalized recommendations</p>
+                            </div>
+                        `;
+                    }
+                });
+        </script>
+    {% endif %}
+{% endblock %}

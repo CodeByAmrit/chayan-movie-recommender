@@ -1,0 +1,76 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.pem
+*.p12  # PKCS#12 files
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Environment variables
+.env
+.env.*
+
+# Flask specific
+instance/
+.webassets-cache
+
+# MySQL DB dumps or credentials
+*.sql
+
+# VS Code or IDE-specific
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs and local storage
+*.log
+*.sqlite3
+*.db
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
