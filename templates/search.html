@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Search Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-purple-400 mb-2">Search Results</h1>
+        <div class="flex items-center">
+            <p class="text-gray-400">Showing results for:</p>
+            <span class="ml-2 text-white font-medium">"{{ query }}"</span>
+            <span class="mx-2 text-gray-500">•</span>
+            <span class="text-gray-400">{{ results|length }} results found</span>
+        </div>
+
+        <!-- Search Box (stays on search page) -->
+        <form action="/search" method="get" class="mt-6 flex">
+            <input type="text" name="q" value="{{ query }}" placeholder="Search for movies..." 
+                   class="flex-grow p-4 rounded-l-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <button type="submit" class="bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-r-lg transition duration-200">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- Results Grid -->
+    {% if results %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {% for movie in results %}
+        <div class="bg-gray-800 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 transform hover:-translate-y-1">
+            <a href="/movie/{{ movie.id }}">
+                {% if movie.poster_path %}
+                <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" 
+                     alt="{{ movie.title }} poster"
+                     class="w-full h-80 object-cover hover:opacity-90 transition-opacity">
+                {% else %}
+                <div class="w-full h-80 bg-gray-700 flex items-center justify-center">
+                    <i class="fas fa-film text-5xl text-gray-500"></i>
+                </div>
+                {% endif %}
+                
+                <div class="p-4">
+                    <h3 class="font-bold text-lg mb-1 truncate">{{ movie.title }}</h3>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center text-yellow-400">
+                            <i class="fas fa-star mr-1"></i>
+                            <span>{{ "%.1f"|format(movie.rating) if movie.rating else "N/A" }}</span>
+                        </div>
+                        <span class="text-sm text-gray-400">
+                            {% if movie.release_date %}
+                                {{ movie.release_date[:4] }}
+                            {% else %}
+                                Year N/A
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="mt-2">
+                        {% if movie.genres %}
+                            {% for genre in movie.genres.split(',')[:3] %}
+                                <span class="inline-block bg-gray-700 rounded-full px-3 py-1 text-xs font-semibold text-gray-300 mr-1 mb-1">
+                                    {{ genre.strip() }}
+                                </span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- No Results Found -->
+    <div class="text-center py-16">
+        <div class="mx-auto w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-search text-3xl text-purple-500"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2">No movies found</h3>
+        <p class="text-gray-400 max-w-md mx-auto">
+            We couldn't find any movies matching "{{ query }}". Try searching for something else.
+        </p>
+        <a href="/" class="mt-6 inline-block bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg transition duration-200">
+            <i class="fas fa-home mr-2"></i> Return Home
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Pagination (optional) -->
+    {% if results|length >= 20 %}
+    <div class="mt-12 flex justify-center">
+        <nav class="flex items-center space-x-2">
+            <a href="#" class="px-4 py-2 border border-gray-700 rounded-md text-gray-400 hover:bg-gray-700">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            <a href="#" class="px-4 py-2 border border-purple-600 bg-purple-600 rounded-md text-white">
+                1
+            </a>
+            <a href="#" class="px-4 py-2 border border-gray-700 rounded-md text-gray-400 hover:bg-gray-700">
+                2
+            </a>
+            <a href="#" class="px-4 py-2 border border-gray-700 rounded-md text-gray-400 hover:bg-gray-700">
+                3
+            </a>
+            <span class="px-2 text-gray-500">...</span>
+            <a href="#" class="px-4 py-2 border border-gray-700 rounded-md text-gray-400 hover:bg-gray-700">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Enhance search experience
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus search input when page loads
+    const searchInput = document.querySelector('input[name="q"]');
+    searchInput.focus();
+    searchInput.selectionStart = searchInput.selectionEnd = searchInput.value.length;
+
+    // Add debounce to search if implementing live search
+    let searchTimer;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            // Could implement live search here with fetch API
+        }, 500);
+    });
+});
+</script>
+{% endblock %}

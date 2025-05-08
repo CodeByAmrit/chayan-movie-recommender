@@ -246,18 +246,19 @@ def create_app():
                 cur.close()
 
                 if user:
-                    stored_password = user[2]  # index for password
+                    stored_password = user["password"]
                     if isinstance(stored_password, str):
                         stored_password = stored_password.encode("utf-8")
 
                     if bcrypt.checkpw(password, stored_password):
-                        session["user_id"] = user[0]  # index for id
-                        session["username"] = user[1]  # index for username
+                        session["user_id"] = user["id"]
+                        session["username"] = user["username"]
                         return redirect(url_for("home"))
 
             return render_template("login.html", error="Invalid credentials")
 
         return render_template("login.html")
+
 
 
     @app.route("/register", methods=["GET", "POST"])
