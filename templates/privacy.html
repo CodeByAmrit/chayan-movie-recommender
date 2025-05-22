@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto bg-gray-800/80 backdrop-blur-sm p-10 rounded-xl shadow-2xl border border-gray-700">
+        <div class="text-center mb-10">
+            <div class="mx-auto w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-shield-alt text-2xl text-white"></i>
+            </div>
+            <h1 class="text-4xl font-extrabold text-white mb-2">
+                Privacy Policy
+            </h1>
+            <p class="text-lg text-gray-300">
+                Last Updated: <span class="text-purple-400">{{ current_date }}</span>
+            </p>
+        </div>
+
+        <div class="prose prose-invert max-w-none">
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">1. Information We Collect</h2>
+                <p class="text-gray-300">
+                    When you use Chayan, we may collect the following information:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li><strong>Account Information:</strong> Username, email address, and password</li>
+                    <li><strong>Usage Data:</strong> Movies you view, ratings, and watch history</li>
+                    <li><strong>Device Information:</strong> IP address, browser type, and operating system</li>
+                    <li><strong>Cookies:</strong> To personalize your experience and remember preferences</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">2. How We Use Your Information</h2>
+                <p class="text-gray-300">
+                    We use your information to:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Provide and improve our recommendation services</li>
+                    <li>Personalize your movie suggestions</li>
+                    <li>Communicate with you about your account</li>
+                    <li>Analyze usage patterns to enhance our platform</li>
+                    <li>Prevent fraud and ensure security</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">3. Data Sharing</h2>
+                <p class="text-gray-300">
+                    We do not sell your personal data. We may share information with:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Service providers who assist in platform operations</li>
+                    <li>Legal authorities when required by law</li>
+                    <li>Third parties in case of business transfers</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">4. Your Rights</h2>
+                <p class="text-gray-300">
+                    You have the right to:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Access, update, or delete your personal information</li>
+                    <li>Opt-out of marketing communications</li>
+                    <li>Request data portability</li>
+                    <li>Withdraw consent where applicable</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">5. Security Measures</h2>
+                <p class="text-gray-300">
+                    We implement industry-standard security measures including:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Encryption of sensitive data</li>
+                    <li>Regular security audits</li>
+                    <li>Access controls and authentication protocols</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">6. Changes to This Policy</h2>
+                <p class="text-gray-300">
+                    We may update this policy periodically. We'll notify you of significant changes through:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Email notifications</li>
+                    <li>In-app announcements</li>
+                    <li>Updated "Last Updated" date on this page</li>
+                </ul>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-bold text-white mb-4">7. Contact Us</h2>
+                <p class="text-gray-300">
+                    For privacy-related inquiries, please contact:
+                </p>
+                <div class="mt-4 p-4 bg-gray-700 rounded-lg">
+                    <p class="text-purple-400"><i class="fas fa-envelope mr-2"></i> privacy@chayan.com</p>
+                    <p class="text-purple-400 mt-2"><i class="fas fa-globe mr-2"></i> https://chayan.com/contact</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block title %}Privacy Policy - Chayan{% endblock %}
+{% block description %}Learn how Chayan collects, uses, and protects your personal information.{% endblock %}

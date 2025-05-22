@@ -1,92 +1,432 @@
-{% extends "base.html" %}
-
-{% block content %}
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold mb-4">Welcome to Chayan</h1>
-        <p class="text-gray-300 mb-6">Your personal movie recommendation system</p>
-        
-        <form action="/search" method="get" class="flex">
-            <input type="text" name="q" placeholder="Search for movies..." 
-                   class="flex-grow p-3 rounded-l bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <button type="submit" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-r">
-                <i class="fas fa-search"></i>
-            </button>
-        </form>
+{% extends "base.html" %} {% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Chat Button (Fixed at bottom right) -->
+    <div class="fixed bottom-6 right-6 z-50">
+      <button id="chat-toggle" class="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-lg transition-all transform hover:scale-110">
+        <i class="fas fa-comment-dots text-xl"></i>
+      </button>
     </div>
-
-    <h2 class="text-2xl font-bold mb-4">Popular Movies</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {% for movie in movies %}
-            <a href="/movie/{{ movie.id }}" class="block bg-gray-800 rounded-lg overflow-hidden hover:transform hover:scale-105 transition duration-300">
-                {% if movie.poster_path %}
-                    <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" alt="{{ movie.title }}" class="w-full h-64 object-cover">
-                {% else %}
-                    <div class="w-full h-64 bg-gray-700 flex items-center justify-center">
-                        <i class="fas fa-film text-4xl text-gray-500"></i>
-                    </div>
-                {% endif %}
-                <div class="p-4">
-                    <h3 class="font-bold text-lg mb-1">{{ movie.title }}</h3>
-                    <div class="flex items-center text-yellow-400 mb-2">
-                        <i class="fas fa-star"></i>
-                        <span class="ml-1">{{ "%.1f"|format(movie.rating) }}</span>
-                    </div>
-                    <p class="text-gray-400 text-sm line-clamp-2">{{ movie.overview }}</p>
-                </div>
-            </a>
-        {% endfor %}
-    </div>
-
-    {% if 'user_id' in session %}
-        <div class="mt-12">
-            <h2 class="text-2xl font-bold mb-4">Recommended For You</h2>
-            <div id="recommendations" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <!-- Recommendations will be loaded here via AJAX -->
-                <div class="text-center py-8">
-                    <i class="fas fa-spinner fa-spin text-2xl text-purple-500"></i>
-                    <p class="mt-2">Loading recommendations...</p>
-                </div>
-            </div>
+  
+    <!-- Chat Container (Hidden by default) -->
+    <div id="chat-container" class="fixed bottom-24 right-6 w-96 bg-gray-800 rounded-xl shadow-xl z-50 hidden flex flex-col border border-gray-700">
+      <!-- Chat Header -->
+      <div class="bg-purple-900 px-4 py-3 rounded-t-xl flex justify-between items-center">
+        <h3 class="text-white font-bold">Movie AI Assistant</h3>
+        <button id="chat-close" class="text-gray-300 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <!-- Chat Messages -->
+      <div id="chat-messages" class="flex-1 p-4 overflow-y-auto max-h-96 bg-gray-800">
+        <div class="text-center text-gray-400 text-sm py-4">
+          Ask me about movies, actors, recommendations, or anything film-related!
         </div>
+      </div>
+      
+      <!-- Chat Input -->
+      <div class="p-3 border-t border-gray-700 bg-gray-800 rounded-b-xl">
+        <form id="chat-form" class="flex gap-2">
+          <input 
+            id="chat-input"
+            type="text" 
+            placeholder="Type your question..." 
+            class="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            autocomplete="off"
+          />
+          <button 
+            type="submit"
+            class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 transition-colors"
+          >
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  
+  
+  <!-- Hero Section -->
+  <div
+    class="relative bg-gradient-to-r from-purple-900 to-indigo-800 rounded-2xl overflow-hidden mb-12"
+  >
+    <div
+      class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+    ></div>
+    <div class="relative z-10 px-8 py-16 sm:py-24 lg:py-32">
+      <div class="max-w-3xl mx-auto text-center">
+        <h1
+          class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-4"
+        >
+          Discover Your Next Favorite Movie
+        </h1>
+        <p class="text-xl text-purple-100 mb-8">
+          Personalized recommendations just for you
+        </p>
 
-        <script>
-            // Load recommendations via AJAX
-            fetch('/recommendations')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('recommendations');
-                    if (data.status === 'success' && data.recommendations.length > 0) {
-                        let html = '';
-                        data.recommendations.forEach(movie => {
-                            html += `
-                                <a href="/movie/${movie.id}" class="block bg-gray-800 rounded-lg overflow-hidden hover:transform hover:scale-105 transition duration-300">
-                                    ${movie.poster_path ? 
-                                        `<img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" class="w-full h-64 object-cover">` :
-                                        `<div class="w-full h-64 bg-gray-700 flex items-center justify-center">
-                                            <i class="fas fa-film text-4xl text-gray-500"></i>
-                                        </div>`
-                                    }
-                                    <div class="p-4">
-                                        <h3 class="font-bold text-lg mb-1">${movie.title}</h3>
-                                        <div class="flex items-center text-yellow-400 mb-2">
-                                            <i class="fas fa-star"></i>
-                                            <span class="ml-1">${movie.rating ? movie.rating.toFixed(1) : 'N/A'}</span>
+        <form action="/search" method="get" class="max-w-xl mx-auto">
+          <div class="flex shadow-lg rounded-lg overflow-hidden">
+            <input
+              type="text"
+              name="q"
+              placeholder="Search movies, genres, actors..."
+              class="flex-grow p-4 bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <button
+              type="submit"
+              class="bg-purple-600 hover:bg-purple-700 px-6 text-white font-medium transition-colors"
+            >
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popular Movies Section -->
+  <section class="mb-16">
+    <div class="flex justify-between items-center mb-8">
+      <h2 class="text-3xl font-bold text-white">Popular Movies</h2>
+      <a
+        href="/movies/popular"
+        class="text-purple-400 hover:text-purple-300 font-medium flex items-center"
+      >
+        View all
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5 ml-1"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </a>
+    </div>
+
+    <div
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+    >
+      {% for movie in movies %}
+      <div
+        class="group relative bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      >
+        <a href="/movie/{{ movie.id }}" class="block">
+          <div class="relative aspect-[2/3]">
+            {% if movie.poster_path %}
+            <img
+              src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}"
+              alt="{{ movie.title }}"
+              class="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
+            />
+            {% else %}
+            <div
+              class="w-full h-full bg-gray-700 flex items-center justify-center"
+            >
+              <i class="fas fa-film text-4xl text-gray-500"></i>
+            </div>
+            {% endif %}
+            <div
+              class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+            ></div>
+            <div
+              class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform opacity-0 group-hover:opacity-100"
+            >
+              <p class="text-white text-sm line-clamp-3">
+                {{ movie.overview }}
+              </p>
+            </div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-bold text-white mb-1 truncate">
+              {{ movie.title }}
+            </h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center text-yellow-400">
+                <i class="fas fa-star mr-1"></i>
+                <span>{{ "%.1f"|format(movie.rating) }}</span>
+              </div>
+              <span class="text-xs text-gray-400"
+                >{{ movie.release_date[:4] if movie.release_date else 'N/A'
+                }}</span
+              >
+            </div>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if 'user_id' in session %}
+  <!-- Recommendations Section -->
+  <section class="mb-16">
+    <div class="flex justify-between items-center mb-8">
+      <h2 class="text-3xl font-bold text-white">Recommended For You</h2>
+      <button
+        id="refresh-recs"
+        class="text-purple-400 hover:text-purple-300 font-medium flex items-center"
+      >
+        Refresh
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5 ml-1"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <div
+      id="recommendations"
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+    >
+      <!-- Loading skeleton -->
+      {% for _ in range(5) %}
+      <div class="bg-gray-800 rounded-xl overflow-hidden animate-pulse">
+        <div class="aspect-[2/3] bg-gray-700"></div>
+        <div class="p-4">
+          <div class="h-5 bg-gray-700 rounded mb-2"></div>
+          <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <script>
+    // Function to load recommendations
+    function loadRecommendations() {
+      const container = document.getElementById("recommendations");
+      const refreshBtn = document.getElementById("refresh-recs");
+
+      // Show loading state
+      container.innerHTML = `
+                {% for _ in range(5) %}
+                <div class="bg-gray-800 rounded-xl overflow-hidden animate-pulse">
+                    <div class="aspect-[2/3] bg-gray-700"></div>
+                    <div class="p-4">
+                        <div class="h-5 bg-gray-700 rounded mb-2"></div>
+                        <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            `;
+
+      fetch("/recommendations")
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "success" && data.recommendations.length > 0) {
+            let html = "";
+            data.recommendations.forEach((movie) => {
+              html += `
+                                <div class="group relative bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                                    <a href="/movie/${movie.id}" class="block">
+                                        <div class="relative aspect-[2/3]">
+                                            ${
+                                              movie.poster_path
+                                                ? `<img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" 
+                                                     class="w-full h-full object-cover group-hover:opacity-75 transition-opacity">`
+                                                : `<div class="w-full h-full bg-gray-700 flex items-center justify-center">
+                                                    <i class="fas fa-film text-4xl text-gray-500"></i>
+                                                </div>`
+                                            }
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            <div class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform opacity-0 group-hover:opacity-100">
+                                                <p class="text-white text-sm line-clamp-3">${
+                                                  movie.overview ||
+                                                  "No overview available"
+                                                }</p>
+                                            </div>
                                         </div>
-                                        <p class="text-gray-400 text-sm line-clamp-2">${movie.overview || 'No overview available'}</p>
-                                    </div>
-                                </a>
+                                        <div class="p-4">
+                                            <h3 class="font-bold text-white mb-1 truncate">${
+                                              movie.title
+                                            }</h3>
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center text-yellow-400">
+                                                    <i class="fas fa-star mr-1"></i>
+                                                    <span>${
+                                                      movie.rating
+                                                        ? movie.rating.toFixed(
+                                                            1
+                                                          )
+                                                        : "N/A"
+                                                    }</span>
+                                                </div>
+                                                <span class="text-xs text-gray-400">${
+                                                  movie.release_date
+                                                    ? movie.release_date.substring(
+                                                        0,
+                                                        4
+                                                      )
+                                                    : "N/A"
+                                                }</span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
                             `;
-                        });
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = `
-                            <div class="col-span-full text-center py-8">
-                                <i class="fas fa-info-circle text-2xl text-purple-500"></i>
-                                <p class="mt-2">Rate some movies to get personalized recommendations</p>
+            });
+            container.innerHTML = html;
+          } else {
+            container.innerHTML = `
+                            <div class="col-span-full text-center py-12 bg-gray-800/50 rounded-xl">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-900/30 rounded-full mb-4">
+                                    <i class="fas fa-film text-3xl text-purple-400"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-white mb-2">No recommendations yet</h3>
+                                <p class="text-gray-400 max-w-md mx-auto">Rate more movies to get personalized recommendations</p>
+                                <a href="/movies/popular" class="mt-4 inline-flex items-center text-purple-400 hover:text-purple-300 font-medium">
+                                    Browse popular movies
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </a>
                             </div>
                         `;
-                    }
-                });
-        </script>
-    {% endif %}
+          }
+        })
+        .catch((error) => {
+          container.innerHTML = `
+                        <div class="col-span-full text-center py-12 bg-gray-800/50 rounded-xl">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-red-900/30 rounded-full mb-4">
+                                <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">Error loading recommendations</h3>
+                            <p class="text-gray-400 max-w-md mx-auto">We couldn't load your recommendations. Please try again later.</p>
+                            <button onclick="loadRecommendations()" class="mt-4 px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-medium">
+                                Retry
+                            </button>
+                        </div>
+                    `;
+        });
+    }
+
+    // Initial load
+    document.addEventListener("DOMContentLoaded", loadRecommendations);
+
+    // Refresh button
+    document
+      .getElementById("refresh-recs")
+      .addEventListener("click", loadRecommendations);
+  </script>
+  <!-- Chat Script -->
+<script>
+  // Toggle chat visibility
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatContainer = document.getElementById('chat-container');
+  const chatClose = document.getElementById('chat-close');
+  
+  chatToggle.addEventListener('click', () => {
+    chatContainer.classList.toggle('hidden');
+  });
+  
+  chatClose.addEventListener('click', () => {
+    chatContainer.classList.add('hidden');
+  });
+
+  // Chat functionality
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatMessages = document.getElementById('chat-messages');
+  
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = chatInput.value.trim();
+    if (!message) return;
+    
+    // Add user message to chat
+    addMessage('user', message);
+    chatInput.value = '';
+    
+    try {
+      // Show loading indicator
+      const loadingId = addMessage('assistant', 'Thinking...', true);
+      
+      // Send to backend
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+      
+      const data = await response.json();
+      
+      // Replace loading message with actual response
+      updateMessage(loadingId, 'assistant', data.response);
+    } catch (error) {
+      updateMessage(loadingId, 'assistant', "Sorry, I'm having trouble connecting. Please try again later.");
+      console.error('Chat error:', error);
+    }
+  });
+  
+  function addMessage(role, content, isLoading = false) {
+    const messageId = 'msg-' + Date.now();
+    const messageDiv = document.createElement('div');
+    messageDiv.id = messageId;
+    messageDiv.className = `mb-4 flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+    
+    messageDiv.innerHTML = `
+      <div class="${role === 'user' ? 'bg-purple-600' : 'bg-gray-700'} rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
+        ${isLoading ? '<div class="flex gap-1"><div class="w-2 h-2 bg-white/50 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-white/50 rounded-full animate-bounce" style="animation-delay: 0.2s"></div><div class="w-2 h-2 bg-white/50 rounded-full animate-bounce" style="animation-delay: 0.4s"></div></div>' : content}
+      </div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return messageId;
+  }
+  
+  function updateMessage(id, role, content) {
+    const messageDiv = document.getElementById(id);
+    if (messageDiv) {
+      // Convert markdown formatting to HTML
+      const formattedContent = formatMessageContent(content);
+      
+      messageDiv.innerHTML = `
+        <div class="${role === 'user' ? 'bg-purple-600' : 'bg-gray-700'} rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
+          ${formattedContent}
+        </div>
+      `;
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  // Function to convert markdown to HTML with Tailwind classes
+  function formatMessageContent(content) {
+    // Replace **bold** with <span class="font-bold">bold</span>
+    let formatted = content.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-white">$1</span>');
+    
+    // Replace *italic* with <span class="italic">italic</span>
+    formatted = formatted.replace(/\*(.*?)\*/g, '<span class="italic">$1</span>');
+    
+    // Replace newlines with <br> tags
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Format lists if detected
+    if (formatted.includes('* ')) {
+      formatted = formatted.replace(/\* (.*?)(<br>|$)/g, '<li class="list-disc ml-4">$1</li>');
+      formatted = formatted.replace(/<li/g, '<ul class="space-y-1 my-2"><li');
+      formatted = formatted.replace(/<\/li>(?!.*<li)/g, '</li></ul>');
+    }
+    
+    return formatted;
+  }
+</script>
+
+  {% endif %}
+</div>
 {% endblock %}

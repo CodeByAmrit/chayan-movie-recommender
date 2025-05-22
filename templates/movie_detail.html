@@ -1,65 +1,174 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="flex flex-col md:flex-row gap-8 mb-8">
-        <div class="md:w-1/3">
-            {% if movie.poster_path %}
-                <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" alt="{{ movie.title }}" class="w-full rounded-lg">
-            {% else %}
-                <div class="w-full h-96 bg-gray-700 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-film text-6xl text-gray-500"></i>
-                </div>
-            {% endif %}
-            
-            <div class="mt-4 bg-gray-800 p-4 rounded-lg">
-                <h3 class="font-bold text-lg mb-2">Rate this movie</h3>
-                <div class="star-rating flex justify-center" data-movie-id="{{ movie.id }}">
-                    {% for i in range(1, 6) %}
-                        <i class="fas fa-star text-2xl mx-1 cursor-pointer {% if user_rating and i <= user_rating %}text-yellow-400{% else %}text-gray-400{% endif %}" 
-                           data-value="{{ i }}"></i>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="md:w-2/3">
-            <h1 class="text-3xl font-bold mb-2">{{ movie.title }}</h1>
-            
-            <div class="flex items-center space-x-4 mb-4">
-                <div class="flex items-center text-yellow-400">
-                    <i class="fas fa-star"></i>
-                    <span class="ml-1">{{ "%.1f"|format(movie.rating) }}</span>
-                </div>
-                <span class="text-gray-400">{{ movie.release_date }}</span>
-                {% if movie.genres %}
-                    <span class="text-gray-400">{{ movie.genres.split(',')|join(' • ') }}</span>
-                {% endif %}
-            </div>
-            
-            <h2 class="text-xl font-bold mb-2">Overview</h2>
-            <p class="text-gray-300 mb-6">{{ movie.overview }}</p>
-            
-            <div class="mt-8">
-                <h2 class="text-2xl font-bold mb-4">Recommended Movies</h2>
-                {% if recommendations %}
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {% for rec in recommendations %}
-                            <a href="/movie/{{ rec.id }}" class="block">
-                                {% if rec.poster_path %}
-                                    <img src="https://image.tmdb.org/t/p/w300{{ rec.poster_path }}" alt="{{ rec.title }}" class="w-full h-40 object-cover rounded-lg">
-                                {% else %}
-                                    <div class="w-full h-40 bg-gray-700 rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-film text-2xl text-gray-500"></i>
-                                    </div>
-                                {% endif %}
-                                <p class="mt-2 text-sm font-medium truncate">{{ rec.title }}</p>
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-gray-400">No recommendations available for this movie.</p>
-                {% endif %}
-            </div>
-        </div>
+<div class="flex flex-col md:flex-row gap-8 mb-8">
+  <!-- Movie Poster and Info -->
+  <div class="md:w-1/3">
+    {% if movie.poster_path %}
+    <img
+      src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}"
+      alt="{{ movie.title }}"
+      class="w-full rounded-lg"
+    />
+    {% else %}
+    <div
+      class="w-full h-96 bg-gray-700 rounded-lg flex items-center justify-center"
+    >
+      <i class="fas fa-film text-6xl text-gray-500"></i>
     </div>
+    {% endif %}
+
+    <!-- Watch Platforms -->
+    {% if movie.platforms %}
+    <div class="mt-4 bg-gray-800 p-4 rounded-lg">
+      <h3 class="font-bold text-lg mb-2">Watch on</h3>
+      {% for country, providers in movie.platforms.items() %}
+      <h4 class="text-sm font-semibold text-gray-300 mb-1">{{ country }}</h4>
+      <ul class="space-y-3 mb-3">
+        {% for platform in providers %}
+        <li class="flex items-center space-x-3">
+          {% if platform.logo_path %}
+          <img
+            src="https://image.tmdb.org/t/p/w45{{ platform.logo_path }}"
+            alt="{{ platform.name }}"
+            class="w-6 h-6 rounded"
+          />
+          {% endif %}
+          <a
+            href="{{ platform.url }}"
+            target="_blank"
+            class="text-green-300 hover:underline"
+          >
+            {{ platform.name }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Movie Detail & Recommendations -->
+  <div class="md:w-2/3">
+    <h1 class="text-3xl font-bold mb-2">{{ movie.title }}</h1>
+
+    <div class="flex items-center space-x-4 mb-4 text-sm">
+      <div class="flex items-center text-yellow-400">
+        <i class="fas fa-star"></i>
+        <span class="ml-1">{{ "%.1f"|format(movie.rating) }}</span>
+      </div>
+      <span class="text-gray-400">{{ movie.release_date }}</span>
+      {% if movie.genres %}
+      <span class="text-gray-400"
+        >{{ movie.genres.split(',')|join(' • ') }}</span
+      >
+      {% endif %}
+    </div>
+
+    <!-- Movie Trailer Section -->
+    {% if movie.videos and movie.videos.results %}
+    <div class="mb-6">
+      <h2 class="text-xl font-bold mb-2">Trailer</h2>
+      <div class="relative pt-[56.25%] rounded-lg overflow-hidden bg-gray-800">
+        <iframe 
+          class="absolute top-0 left-0 w-full h-full"
+          src="https://www.youtube.com/embed/{{ movie.videos.results.0.key }}?autoplay=0&rel=0"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+      {% if movie.videos.results|length > 1 %}
+      <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {% for video in movie.videos.results[1:4] %}
+        <a 
+          href="https://www.youtube.com/watch?v={{ video.key }}" 
+          target="_blank"
+          class="flex items-center space-x-2 p-2 bg-gray-800 rounded hover:bg-gray-700 transition"
+        >
+          <i class="fas fa-play text-red-500"></i>
+          <span class="text-sm truncate">{{ video.name }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <h2 class="text-xl font-bold mb-2">Overview</h2>
+    <p class="text-gray-300 mb-6">{{ movie.overview }}</p>
+
+    <!-- Additional Movie Details -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      {% if movie.runtime %}
+      <div>
+        <h3 class="text-sm font-semibold text-gray-400">Runtime</h3>
+        <p>{{ movie.runtime }} minutes</p>
+      </div>
+      {% endif %}
+      
+      {% if movie.director %}
+      <div>
+        <h3 class="text-sm font-semibold text-gray-400">Director</h3>
+        <p>{{ movie.director }}</p>
+      </div>
+      {% endif %}
+      
+      {% if movie.cast %}
+      <div class="sm:col-span-2">
+        <h3 class="text-sm font-semibold text-gray-400">Cast</h3>
+        <p>{{ movie.cast|join(', ') }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recommendations Section -->
+    <div class="mt-8">
+      <h2 class="text-2xl font-bold mb-4">Recommended Movies</h2>
+      {% if recommendations %}
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {% for rec in recommendations %}
+        <a href="/movie/{{ rec.id }}" class="block">
+          {% if rec.poster_path %}
+          <img
+            src="https://image.tmdb.org/t/p/w300{{ rec.poster_path }}"
+            alt="{{ rec.title }}"
+            class="w-full h-40 object-cover rounded-lg hover:opacity-80 transition"
+          />
+          {% else %}
+          <div
+            class="w-full h-40 bg-gray-700 rounded-lg flex items-center justify-center hover:opacity-80 transition"
+          >
+            <i class="fas fa-film text-2xl text-gray-500"></i>
+          </div>
+          {% endif %}
+          <p class="mt-2 text-sm font-medium truncate">{{ rec.title }}</p>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-gray-400">No recommendations available for this movie.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-resize YouTube iframe to maintain aspect ratio
+  function resizeVideo() {
+    const videos = document.querySelectorAll('.video-container');
+    videos.forEach(container => {
+      const width = container.offsetWidth;
+      container.style.height = (width * 0.5625) + 'px';
+    });
+  }
+
+  // Initial resize
+  window.addEventListener('load', resizeVideo);
+  // Resize on window change
+  window.addEventListener('resize', resizeVideo);
+</script>
 {% endblock %}

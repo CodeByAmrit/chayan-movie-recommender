@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto bg-gray-800/80 backdrop-blur-sm p-10 rounded-xl shadow-2xl border border-gray-700">
+        <div class="text-center mb-10">
+            <div class="mx-auto w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-file-contract text-2xl text-white"></i>
+            </div>
+            <h1 class="text-4xl font-extrabold text-white mb-2">
+                Terms of Service
+            </h1>
+            <p class="text-lg text-gray-300">
+                Effective Date: <span class="text-purple-400">{{ current_date }}</span>
+            </p>
+        </div>
+
+        <div class="prose prose-invert max-w-none">
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">1. Acceptance of Terms</h2>
+                <p class="text-gray-300">
+                    By accessing or using Chayan ("Service"), you agree to be bound by these Terms. If you disagree, please refrain from using our Service.
+                </p>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">2. Account Registration</h2>
+                <p class="text-gray-300">
+                    To use Chayan, you must:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Provide accurate and complete registration information</li>
+                    <li>Maintain the security of your login credentials</li>
+                    <li>Be at least 13 years old (or 16 in some regions)</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">3. User Responsibilities</h2>
+                <p class="text-gray-300">
+                    You agree not to:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Use the Service for illegal purposes</li>
+                    <li>Attempt to access others' accounts</li>
+                    <li>Reverse engineer or modify our platform</li>
+                    <li>Upload harmful content or malware</li>
+                    <li>Violate intellectual property rights</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">4. Content & Recommendations</h2>
+                <p class="text-gray-300">
+                    Chayan provides:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Personalized movie recommendations based on your activity</li>
+                    <li>Information about films from third-party sources</li>
+                    <li>User-generated watchlists and ratings</li>
+                </ul>
+                <p class="text-gray-300 mt-4">
+                    We don't guarantee the accuracy of all content.
+                </p>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">5. Termination</h2>
+                <p class="text-gray-300">
+                    We may suspend or terminate accounts for:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Violation of these Terms</li>
+                    <li>Fraudulent activity</li>
+                    <li>Extended periods of inactivity</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">6. Limitation of Liability</h2>
+                <p class="text-gray-300">
+                    Chayan is not liable for:
+                </p>
+                <ul class="list-disc pl-5 space-y-2 mt-3 text-gray-300">
+                    <li>Service interruptions or errors</li>
+                    <li>Inaccurate recommendations</li>
+                    <li>Third-party content or links</li>
+                    <li>Indirect or consequential damages</li>
+                </ul>
+            </div>
+
+            <div class="border-b border-gray-700 pb-6 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-4">7. Changes to Terms</h2>
+                <p class="text-gray-300">
+                    We may modify these Terms. Continued use constitutes acceptance.
+                </p>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-bold text-white mb-4">8. Governing Law</h2>
+                <p class="text-gray-300">
+                    These Terms are governed by the laws of [Your Jurisdiction].
+                </p>
+                <div class="mt-4 p-4 bg-gray-700 rounded-lg">
+                    <p class="text-purple-400"><i class="fas fa-question-circle mr-2"></i> Questions? Contact us at legal@chayan.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block title %}Terms of Service - Chayan{% endblock %}
+{% block description %}The official terms governing your use of the Chayan recommendation service.{% endblock %}

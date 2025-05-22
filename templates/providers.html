@@ -1,0 +1,33 @@
+<!-- templates/providers.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Watch Providers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-4">Available Watch Providers</h1>
+  {% for country, info in providers.items() %}
+    <div class="mb-6 bg-white p-4 rounded shadow">
+      <h2 class="text-xl font-semibold">{{ country }}</h2>
+      <a href="{{ info.link }}" class="text-blue-600 underline text-sm" target="_blank">Go to TMDb Page</a>
+      {% for category in ['flatrate', 'rent', 'buy', 'free'] %}
+        {% if info[category] %}
+          <div class="mt-2">
+            <strong class="block capitalize">{{ category }}:</strong>
+            <div class="flex gap-4 mt-1 flex-wrap">
+              {% for provider in info[category] %}
+                <div class="text-center">
+                  <img src="{{ provider.logo_path }}" alt="{{ provider.provider_name }}" class="w-12 h-12 mx-auto">
+                  <div class="text-xs mt-1">{{ provider.provider_name }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endfor %}
+</body>
+</html>

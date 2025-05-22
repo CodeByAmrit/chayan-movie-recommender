@@ -1,0 +1,90 @@
+[file name]: preferences.html
+[file content begin]
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl w-full space-y-8 bg-gray-800 p-10 rounded-xl shadow-2xl">
+        <div class="text-center">
+            <h2 class="mt-6 text-3xl font-extrabold text-purple-400">
+                Tell Us Your Preferences
+            </h2>
+            <p class="mt-2 text-sm text-gray-400">
+                Help us recommend better movies for you
+            </p>
+        </div>
+
+        <form class="mt-8 space-y-6" method="POST" action="/save_preferences">
+            <div class="space-y-6">
+                <!-- Favorite Genres -->
+                <div>
+                    <h3 class="text-lg font-medium text-white mb-3">What genres do you enjoy? (Select up to 3)</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {% for genre in genres %}
+                        <div class="flex items-center">
+                            <input id="genre-{{ genre.id }}" name="genres" type="checkbox" value="{{ genre.id }}"
+                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
+                            <label for="genre-{{ genre.id }}" class="ml-2 block text-sm text-gray-300">
+                                {{ genre.name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Preferred Languages -->
+                <div>
+                    <h3 class="text-lg font-medium text-white mb-3">Preferred Languages</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {% for language in languages %}
+                        <div class="flex items-center">
+                            <input id="language-{{ language.id }}" name="languages" type="checkbox" value="{{ language.id }}"
+                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
+                            <label for="language-{{ language.id }}" class="ml-2 block text-sm text-gray-300">
+                                {{ language.name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Preferred Decade -->
+                <div>
+                    <h3 class="text-lg font-medium text-white mb-3">Favorite Movie Era</h3>
+                    <select name="decade" class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-700 border-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md text-white">
+                        <option value="">Any Era</option>
+                        <option value="2020s">2020s (New Releases)</option>
+                        <option value="2010s">2010s</option>
+                        <option value="2000s">2000s</option>
+                        <option value="1990s">1990s</option>
+                        <option value="1980s">1980s</option>
+                        <option value="1970s">1970s</option>
+                        <option value="1960s">1960s or earlier</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit"
+                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-150 ease-in-out">
+                    Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Limit genre selections to 3
+    document.querySelectorAll('input[name="genres"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checked = document.querySelectorAll('input[name="genres"]:checked');
+            if (checked.length > 3) {
+                this.checked = false;
+                alert('Please select no more than 3 genres');
+            }
+        });
+    });
+</script>
+{% endblock %}
+[file content end]

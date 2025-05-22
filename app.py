@@ -1,3 +1,4 @@
+import json
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_mysqldb import MySQL
@@ -11,15 +12,20 @@ from dotenv import load_dotenv
 import bcrypt
 from datetime import datetime
 import MySQLdb
+from flask import Flask, request, jsonify
+import google.generativeai as genai
+import os
 
-# Load environment variables
+# Configure Gemini
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-2.0-flash")
+
 load_dotenv()
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv("SECRET_KEY")
 
-    # MySQL Configuration for Aiven
     app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
     app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', 3306))
     app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
@@ -29,10 +35,8 @@ def create_app():
     app.config['MYSQL_SSL_VERIFY_IDENTITY'] = os.getenv('MYSQL_SSL_VERIFY_IDENTITY', 'true').lower() == 'true'
     app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
-    # Initialize MySQL
     mysql = MySQL(app)
 
-    # TMDB API Configuration
     TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
@@ -44,8 +48,7 @@ def create_app():
             self.load_data()
 
         def load_data(self):
-            with app.app_context():
-                # Load movies from database
+            with app.app_context():                
                 cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
                 cur.execute("SELECT * FROM movies")
                 movies = cur.fetchall()
@@ -53,14 +56,12 @@ def create_app():
 
                 self.movies_df = pd.DataFrame(movies)
 
-                # Create TF-IDF matrix for content-based filtering
                 if not self.movies_df.empty and "overview" in self.movies_df:
                     tfidf = TfidfVectorizer(stop_words="english")
                     self.tfidf_matrix = tfidf.fit_transform(
                         self.movies_df["overview"].fillna("")
                     )
 
-                    # Load ratings for collaborative filtering
                     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
                     cur.execute("SELECT user_id, movie_id, rating FROM user_preferences")
                     ratings = cur.fetchall()
@@ -79,7 +80,6 @@ def create_app():
                             ["rating_x", "rating_y", "movie_id"], axis=1, inplace=True
                         )
 
-                        # Create KNN model for collaborative filtering
                         features = pd.get_dummies(
                             self.movies_df["genres"]
                             .str.split(",", expand=True)
@@ -90,6 +90,96 @@ def create_app():
                         self.knn_model = NearestNeighbors(n_neighbors=5, algorithm="auto")
                         self.knn_model.fit(features)
 
+        def hybrid_recommendations(self, user_id, movie_id=None, n=5):
+            # Get user preferences
+            with app.app_context():
+                cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+                # Get genre preferences
+                cur.execute("""
+                    SELECT g.name as genre 
+                    FROM user_genre_preferences ugp
+                    JOIN genres g ON ugp.genre_id = g.id
+                    WHERE ugp.user_id = %s
+                """, (user_id,))
+                user_genres = [row['genre'] for row in cur.fetchall()]
+
+                # Get language preferences
+                cur.execute("""
+                    SELECT l.name as language 
+                    FROM user_language_preferences ulp
+                    JOIN languages l ON ulp.language_id = l.id
+                    WHERE ulp.user_id = %s
+                """, (user_id,))
+                user_languages = [row['language'] for row in cur.fetchall()]
+
+                # Get decade preference
+                cur.execute("""
+                    SELECT decade 
+                    FROM user_decade_preferences 
+                    WHERE user_id = %s
+                """, (user_id,))
+                decade_row = cur.fetchone()
+                decade = decade_row['decade'] if decade_row else None
+
+                cur.close()
+
+            # Start with all movies
+            filtered_movies = self.movies_df.copy()
+
+            # Apply genre filter if any
+            if user_genres:
+                filtered_movies = filtered_movies[filtered_movies['genres'].apply(lambda x: any(genre in x for genre in user_genres))]
+
+            # Apply language filter if any
+            if user_languages and 'original_language' in filtered_movies.columns:
+                filtered_movies = filtered_movies[filtered_movies['original_language'].isin([lang.lower()[:2] for lang in user_languages])]
+
+            # Apply decade filter if any
+            if decade and 'release_date' in filtered_movies.columns:
+                if decade == '2020s':
+                    filtered_movies = filtered_movies[
+                        filtered_movies['release_date'] >= '2020-01-01'
+                        ]
+                elif decade == '2010s':
+                    filtered_movies = filtered_movies[
+                        (filtered_movies['release_date'] >= '2010-01-01') &
+                        (filtered_movies['release_date'] < '2020-01-01')
+                        ]
+                elif decade == '2000s':
+                    filtered_movies = filtered_movies[
+                        (filtered_movies['release_date'] >= '2000-01-01') &
+                        (filtered_movies['release_date'] < '2010-01-01')
+                        ]
+                # Add more decades as needed
+
+            # If no movies left after filtering, use all movies
+            if filtered_movies.empty:
+                filtered_movies = self.movies_df.copy()
+
+            # Rest of the recommendation logic remains the same
+            cb_recs = []
+            cf_recs = []
+
+            if movie_id and movie_id in filtered_movies['id'].values:
+                cb_recs = self.content_based_recommendations(movie_id, n)
+
+            if user_id:
+                cf_recs = self.collaborative_filtering_recommendations(user_id, n)
+
+            # Combine and deduplicate recommendations
+            combined = cb_recs + cf_recs
+            seen = set()
+            unique_recs = []
+
+            for rec in combined:
+                if rec["id"] not in seen:
+                    seen.add(rec["id"])
+                    unique_recs.append(rec)
+                    if len(unique_recs) >= n:
+                        break
+
+            return unique_recs
         def content_based_recommendations(self, movie_id, n=5):
             if self.tfidf_matrix is None:
                 return []
@@ -148,7 +238,6 @@ def create_app():
             if user_id:
                 cf_recs = self.collaborative_filtering_recommendations(user_id, n)
 
-            # Combine and deduplicate recommendations
             combined = cb_recs + cf_recs
             seen = set()
             unique_recs = []
@@ -162,11 +251,9 @@ def create_app():
 
             return unique_recs
 
-    # Initialize recommender within app context
     with app.app_context():
         recommender = RecommendationEngine()
 
-    # Helper Functions
     def fetch_movie_from_tmdb(movie_id):
         url = f"{TMDB_BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}"
         response = requests.get(url)
@@ -190,16 +277,20 @@ def create_app():
             cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
             cur.execute(
                 """
-                INSERT INTO movies (tmdb_id, title, overview, genres, release_date, poster_path, rating)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO movies (
+                    tmdb_id, title, overview, genres, release_date, 
+                    poster_path, rating, original_language
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE 
                     title = VALUES(title),
                     overview = VALUES(overview),
                     genres = VALUES(genres),
                     release_date = VALUES(release_date),
                     poster_path = VALUES(poster_path),
-                    rating = VALUES(rating)
-            """,
+                    rating = VALUES(rating),
+                    original_language = VALUES(original_language)
+                """,
                 (
                     tmdb_id,
                     movie_data["title"],
@@ -208,6 +299,7 @@ def create_app():
                     movie_data["release_date"],
                     movie_data["poster_path"],
                     movie_data["vote_average"],
+                    movie_data["original_language"],
                 ),
             )
             mysql.connection.commit()
@@ -218,6 +310,15 @@ def create_app():
             recommender.load_data()
 
         return movie_id
+
+    @app.route("/privacy")
+    def privacy():
+        return render_template("privacy.html")
+
+    @app.route("/terms")
+    def terms():
+
+        return render_template("terms.html")
 
     # Routes
     @app.route("/")
@@ -259,34 +360,105 @@ def create_app():
 
         return render_template("login.html")
 
-
-
-    @app.route("/register", methods=["GET", "POST"])
-    def register():
-        if request.method == "POST":
-            username = request.form["username"]
-            password = request.form["password"].encode("utf-8")
-            hashed = bcrypt.hashpw(password, bcrypt.gensalt())
-
-            try:
-                with app.app_context():
-                    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-                    cur.execute(
-                        "INSERT INTO users (username, password) VALUES (%s, %s)",
-                        (username, hashed.decode("utf-8")),
-                    )
-                    mysql.connection.commit()
-                    cur.close()
-                return redirect(url_for("login"))
-            except Exception as e:
-                return render_template("register.html", error="Username already exists")
-
-        return render_template("register.html")
-
     @app.route("/logout")
     def logout():
         session.clear()
         return redirect(url_for("login"))
+
+    @app.route('/movie/<int:movie_id>/providers')
+    def movie_providers(movie_id):
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers"
+        headers = {"Authorization": f"Bearer {TMDB_API_KEY}"}
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch providers"}), 500
+
+        data = response.json().get("results", {})
+
+        all_countries = {}
+
+        for country_code, country_data in data.items():
+            all_countries[country_code] = {
+                "link": country_data.get("link"),
+                "flatrate": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("flatrate", [])
+                ],
+                "rent": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("rent", [])
+                ],
+                "buy": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("buy", [])
+                ],
+                "free": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("free", [])
+                ]
+            }
+
+        return jsonify(all_countries)
+
+    @app.route('/movie/<int:movie_id>/providers/html')
+    def movie_providers_html(movie_id):
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers"
+        headers = {"Authorization": f"Bearer {TMDB_API_KEY}"}
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            return "Error fetching providers", 500
+
+        data = response.json().get("results", {})
+        all_countries = {}
+
+        for country_code, country_data in data.items():
+            all_countries[country_code] = {
+                "link": country_data.get("link"),
+                "flatrate": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("flatrate", [])
+                ],
+                "rent": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("rent", [])
+                ],
+                "buy": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("buy", [])
+                ],
+                "free": [
+                    {
+                        "provider_name": p.get("provider_name"),
+                        "logo_path": f"https://image.tmdb.org/t/p/w200{p.get('logo_path')}"
+                    }
+                    for p in country_data.get("free", [])
+                ]
+            }
+
+        return render_template("providers.html", providers=all_countries)
 
     @app.route("/movie/<int:movie_id>")
     def movie_detail(movie_id):
@@ -302,10 +474,30 @@ def create_app():
                 cur.close()
                 return redirect(url_for("home"))
 
-            # Get recommendations
-            recommendations = recommender.hybrid_recommendations(session["user_id"], movie_id)
+            # TMDB Watch Providers API
+            tmdb_api_key = os.getenv("TMDB_API_KEY")
+            provider_url = f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers"
+            response = requests.get(provider_url, params={"api_key": tmdb_api_key})
 
-            # Check if user has rated this movie
+            platforms = []
+            if response.status_code == 200:
+                provider_data = response.json().get("results", {}).get("IN")  # 'IN' for India
+                if provider_data and "flatrate" in provider_data:
+                    for provider in provider_data["flatrate"]:
+                        platforms.append({
+                            "name": provider["provider_name"],
+                            "url": provider_data.get("link", "#"),
+                            "logo_path": provider["logo_path"]
+                        })
+
+            movie["platforms"] = provider_url
+            try:
+                movie['platforms'] = json.loads(movie['platforms'])
+            except json.JSONDecodeError:
+                movie['platforms'] = {}
+            print(response.json().get("results", {}).get("IN"))
+
+            # User rating
             cur.execute(
                 """
                 SELECT rating FROM user_preferences 
@@ -314,6 +506,10 @@ def create_app():
                 (session["user_id"], movie_id),
             )
             user_rating = cur.fetchone()
+
+            # Recommendations
+            recommendations = recommender.hybrid_recommendations(session["user_id"], movie_id)
+
             cur.close()
 
         return render_template(
@@ -347,7 +543,6 @@ def create_app():
             mysql.connection.commit()
             cur.close()
 
-            # Refresh recommendation engine
             recommender.load_data()
 
         return jsonify({"status": "success"})
@@ -372,7 +567,6 @@ def create_app():
             local_results = cur.fetchall()
             cur.close()
 
-        # If not enough local results, search TMDB
         if len(local_results) < 5:
             tmdb_results = search_movies_on_tmdb(query)
             for result in tmdb_results:
@@ -402,6 +596,132 @@ def create_app():
         recommendations = recommender.hybrid_recommendations(session["user_id"])
         return jsonify({"status": "success", "recommendations": recommendations})
 
+    @app.route('/save_preferences', methods=['POST'])
+    def save_preferences():
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+
+        genres = request.form.getlist('genres')
+        languages = request.form.getlist('languages')
+        decade = request.form.get('decade')
+
+        with app.app_context():
+            cur = mysql.connection.cursor()
+
+            # Clear existing preferences
+            cur.execute("DELETE FROM user_genre_preferences WHERE user_id = %s", (session['user_id'],))
+            cur.execute("DELETE FROM user_language_preferences WHERE user_id = %s", (session['user_id'],))
+            cur.execute("DELETE FROM user_decade_preferences WHERE user_id = %s", (session['user_id'],))
+
+            # Save new preferences
+            for genre_id in genres[:3]:  # Only save up to 3 genres
+                cur.execute(
+                    "INSERT INTO user_genre_preferences (user_id, genre_id) VALUES (%s, %s)",
+                    (session['user_id'], genre_id)
+                )
+
+            for language_id in languages:
+                cur.execute(
+                    "INSERT INTO user_language_preferences (user_id, language_id) VALUES (%s, %s)",
+                    (session['user_id'], language_id)
+                )
+
+            if decade:
+                cur.execute(
+                    "INSERT INTO user_decade_preferences (user_id, decade) VALUES (%s, %s)",
+                    (session['user_id'], decade)
+                )
+
+            mysql.connection.commit()
+            cur.close()
+
+        return redirect(url_for('home'))
+
+    @app.route("/register", methods=["GET", "POST"])
+    def register():
+        if request.method == "POST":
+            username = request.form["username"]
+            password = request.form["password"].encode("utf-8")
+            hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+
+            try:
+                with app.app_context():
+                    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+                    cur.execute(
+                        "INSERT INTO users (username, password) VALUES (%s, %s)",
+                        (username, hashed.decode("utf-8")),
+                    )
+                    mysql.connection.commit()
+                    user_id = cur.lastrowid
+                    cur.close()
+
+                    session["user_id"] = user_id
+                    session["username"] = username
+                    return redirect(url_for('preferences'))
+            except Exception as e:
+                return render_template("register.html", error="Username already exists")
+
+        return render_template("register.html")
+
+    @app.route("/preferences")
+    def preferences():
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+
+        with app.app_context():
+            cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cur.execute("SELECT * FROM genres")
+            genres = cur.fetchall()
+            cur.execute("SELECT * FROM languages")
+            languages = cur.fetchall()
+            cur.close()
+
+        return render_template("preferences.html", genres=genres, languages=languages)
+
+    @app.route('/chat', methods=['POST'])
+    def chat():
+        if 'user_id' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        data = request.get_json()
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({'error': 'No message provided'}), 400
+        
+        try:
+            # Create a movie-focused prompt with clear formatting instructions
+            prompt = f"""
+            You are a helpful movie expert assistant for a movie recommendation platform. 
+            The user is asking: "{user_message}"
+            
+            Please provide a concise, informative response about movies, actors, directors, 
+            or anything film-related. Format your response as follows:
+            
+            - Use **double asterisks** for important names/titles (e.g., **Brie Larson**)
+            - Use *single asterisks* for emphasis (e.g., *Captain Marvel*)
+            - For lists, use asterisk + space (e.g., * Item 1)
+            - Keep responses under 300 words.
+            
+            Example format for cast information:
+            The main cast includes:
+            * **Actor Name** as Character Name
+            * **Actor Name** as Character Name
+            
+            For non-movie questions, politely redirect back to movie topics.
+            """
+            
+            response = model.generate_content(prompt)
+            
+            # Clean up the response if needed
+            cleaned_response = response.text.replace('•', '*')  # Convert bullet points if needed
+            
+            return jsonify({'response': cleaned_response})
+        
+        except Exception as e:
+            print(f"Error with Gemini API: {e}")
+            return jsonify({'response': "Sorry, I'm having trouble answering that. Please try again later."})
+    
     return app
 
 app = create_app()
